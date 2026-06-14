@@ -179,10 +179,19 @@
     async function fetchNearby(lat, lng, radius) {
         statusEl.textContent = `正在搜尋方圓 ${radius} 公尺內的地點...`;
         
+        const API_KEY = "4167e0a317567bf0c72fe00d0f610420";
+        
         try {
-            let apiUrl = API_BASE_URL + `/api/nearby?lat=${lat}&lng=${lng}&radius=${radius}`;
+            let apiUrl = API_BASE_URL + `/api/nearby?lat=${lat}&lng=${lng}&radius=${radius}&key=${API_KEY}`;
             
             const response = await fetch(apiUrl);
+            
+            if (!response.ok) {
+                const errorText = await response.text();
+                statusEl.textContent = `API 錯誤 (${response.status}): ${errorText}`;
+                return;
+            }
+
             const result = await response.json();
 
             if (result.status === 'success') {
