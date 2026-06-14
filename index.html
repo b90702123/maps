@@ -91,13 +91,23 @@
 </div>
 
 <div id="controls">
-    <button id="locate-btn">取得目前位置並搜尋 (500m)</button>
+    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
+        <label for="radius-select" style="font-size: 14px; color: #555;">搜尋範圍：</label>
+        <select id="radius-select" style="flex: 1; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+            <option value="500">500 公尺</option>
+            <option value="1000">1 公里</option>
+            <option value="2000">2 公里</option>
+            <option value="5000">5 公里</option>
+        </select>
+    </div>
+    <button id="locate-btn">取得目前位置並搜尋</button>
 </div>
 
 <!-- Leaflet JS -->
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
     const locateBtn = document.getElementById('locate-btn');
+    const radiusSelect = document.getElementById('radius-select');
     const statusEl = document.getElementById('status');
     const resultsList = document.getElementById('results-list');
     
@@ -109,12 +119,11 @@
 
     let userMarker;
     let locationMarkers = [];
+    let searchCircle; // 用於顯示搜尋範圍的圓圈
 
-    // API 基礎網址 (請修改為你對外開放的 IP 或網域)
-    // 預設為本地測試，如果是 GitHub Pages，需要填寫你的公共 DDNS 或伺服器 IP
+    // API 基礎網址
+    // 已修改為你的伺服器實體 IP
     const API_BASE_URL = 'http://192.168.1.178:8000'; 
-    // 注意：如果是正式部署，建議改為固定的公共網址
-    // const API_BASE_URL = 'http://your-server-ip:8000';
 
     locateBtn.addEventListener('click', () => {
         if (!navigator.geolocation) {
@@ -122,13 +131,15 @@
             return;
         }
 
+        const radius = radiusSelect.value;
         locateBtn.disabled = true;
         statusEl.textContent = '正在定位中...';
         resultsList.innerHTML = '';
         
-        // 清除舊的標記
+        // 清除舊的標記與圓圈
         locationMarkers.forEach(m => map.removeLayer(m));
         locationMarkers = [];
+        if (searchCircle) map.removeLayer(searchCircle);
 
         navigator.geolocation.getCurrentPosition(
             (position) => {
@@ -136,15 +147,26 @@
                 statusEl.textContent = `定位成功: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
                 
                 // 更新地圖視角與使用者標記
-                map.setView([latitude, longitude], 16);
+                map.setView([latitude, longitude], 15);
                 if (userMarker) {
                     userMarker.setLatLng([latitude, longitude]);
                 } else {
                     userMarker = L.marker([latitude, longitude]).addTo(map).bindPopup("你在這裡").openPopup();
                 }
 
+                // 畫出搜尋範圍圓圈
+                searchCircle = L.circle([latitude, longitude], {
+                    color: '#28a745',
+                    fillColor: '#28a745',
+                    fillOpacity: 0.1,
+                    radius: parseInt(radius)
+                }).addTo(map);
+
+                // 自動調整地圖縮放以包含整個圓圈
+                map.fitBounds(searchCircle.getBounds());
+
                 // 搜尋附近
-                fetchNearby(latitude, longitude);
+                fetchNearby(latitude, longitude, radius);
             },
             (error) => {
                 locateBtn.disabled = false;
@@ -154,27 +176,19 @@
         );
     });
 
-    async function fetchNearby(lat, lng) {
-        statusEl.textContent = '正在搜尋方圓 500 公尺內的地點...';
+    async function fetchNearby(lat, lng, radius) {
+        statusEl.textContent = `正在搜尋方圓 ${radius} 公尺內的地點...`;
         
         try {
-            // 如果是在 GitHub Pages 上執行，hostname 會是 github.io，
-            // 這時需要將 API_URL 指向你家中的伺服器 (需開放 Port Forwarding)
-            let apiUrl = API_BASE_URL + `/api/nearby?lat=${lat}&lng=${lng}&radius=500`;
+            let apiUrl = API_BASE_URL + `/api/nearby?lat=${lat}&lng=${lng}&radius=${radius}`;
             
-            // 這裡做一個簡單的手動覆蓋，方便使用者測試
-            if (window.location.hostname.includes('github.io')) {
-                // 提醒使用者修改此處
-                statusEl.innerHTML = '<span style="color:red;">請確認 API_BASE_URL 已修改為你的伺服器位址</span>';
-            }
-
             const response = await fetch(apiUrl);
             const result = await response.json();
 
             if (result.status === 'success') {
                 const data = result.data;
                 if (data.length === 0) {
-                    statusEl.textContent = '方圓 500 公尺內沒有找到地點';
+                    statusEl.textContent = `方圓 ${radius} 公尺內沒有找到地點`;
                 } else {
                     statusEl.textContent = `找到 ${data.length} 個地點`;
                     renderResults(data);
