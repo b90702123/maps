@@ -14,94 +14,157 @@
             display: flex;
             flex-direction: column;
             height: 100vh;
-            background-color: #f4f4f9;
+            background-color: #f8f9fa;
         }
         #header {
-            padding: 15px;
-            background: #007bff;
+            padding: 12px;
+            background: linear-gradient(135deg, #007bff, #0056b3);
             color: white;
             text-align: center;
             box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
-        #map {
-            flex: 1;
-            width: 100%;
+            z-index: 1000;
         }
         #controls {
-            padding: 15px;
+            padding: 12px;
             background: white;
             display: flex;
             flex-direction: column;
+            gap: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+            z-index: 999;
+        }
+        .control-row {
+            display: flex;
+            align-items: center;
             gap: 10px;
-            border-top: 1px solid #ddd;
+        }
+        select {
+            flex: 1;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ced4da;
+            font-size: 15px;
+            appearance: none;
+            background: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") no-repeat right 10px center/15px;
+            background-color: #fff;
         }
         button {
             padding: 12px;
             font-size: 16px;
+            font-weight: 600;
             background-color: #28a745;
             color: white;
             border: none;
             border-radius: 8px;
             cursor: pointer;
-            transition: background 0.3s;
+            transition: all 0.2s;
+            box-shadow: 0 2px 4px rgba(40, 167, 69, 0.2);
+        }
+        button:active {
+            transform: scale(0.98);
+            background-color: #218838;
         }
         button:disabled {
-            background-color: #ccc;
+            background-color: #6c757d;
+            box-shadow: none;
+            opacity: 0.7;
+        }
+        #status-bar {
+            background: #e9ecef;
+            padding: 6px 12px;
+            font-size: 13px;
+            color: #495057;
+            text-align: center;
+            border-bottom: 1px solid #dee2e6;
+        }
+        #main-container {
+            display: flex;
+            flex-direction: column;
+            flex: 1;
+            overflow: hidden;
+        }
+        #map {
+            flex: 2; /* 地圖佔比大一點 */
+            width: 100%;
+            z-index: 1;
         }
         #results-container {
-            max-height: 200px;
+            flex: 1; /* 結果列表佔比 */
             overflow-y: auto;
             background: white;
-            padding: 0 15px;
-            border-top: 1px solid #eee;
+            border-top: 1px solid #dee2e6;
         }
         .location-item {
-            padding: 10px 0;
-            border-bottom: 1px solid #eee;
+            padding: 12px 15px;
+            border-bottom: 1px solid #f1f3f5;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            transition: background 0.2s;
         }
-        .location-item:last-child {
-            border-bottom: none;
+        .location-item:active {
+            background-color: #f8f9fa;
+        }
+        .location-info {
+            flex: 1;
         }
         .location-name {
-            font-weight: bold;
-            color: #333;
+            font-weight: 600;
+            color: #212529;
+            margin-bottom: 2px;
         }
-        .location-dist {
-            font-size: 0.85em;
-            color: #666;
+        .location-desc {
+            font-size: 13px;
+            color: #6c757d;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            max-width: 200px;
         }
-        .status-msg {
-            font-size: 0.9em;
-            color: #555;
-            text-align: center;
-            padding: 5px;
+        .location-dist-badge {
+            background: #f1f3f5;
+            padding: 4px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 700;
+            color: #007bff;
+            margin-left: 10px;
+            white-space: nowrap;
         }
     </style>
 </head>
 <body>
 
 <div id="header">
-    <h2 style="margin:0;">附近地點搜尋</h2>
-</div>
-
-<div id="map"></div>
-
-<div id="results-container">
-    <div id="status" class="status-msg">點擊按鈕開始定位並搜尋</div>
-    <div id="results-list"></div>
+    <h2 style="margin:0; font-size: 1.2rem;">台灣地點搜尋</h2>
 </div>
 
 <div id="controls">
-    <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 5px;">
-        <label for="radius-select" style="font-size: 14px; color: #555;">搜尋範圍：</label>
-        <select id="radius-select" style="flex: 1; padding: 8px; border-radius: 5px; border: 1px solid #ccc;">
+    <div class="control-row">
+        <label for="radius-select" style="font-size: 14px; font-weight: bold; color: #495057;">範圍</label>
+        <select id="radius-select">
             <option value="500">500 公尺</option>
             <option value="1000">1 公里</option>
             <option value="2000">2 公里</option>
             <option value="5000">5 公里</option>
         </select>
+        <button id="locate-btn" style="flex: 1.5;">開始定位搜尋</button>
     </div>
-    <button id="locate-btn">取得目前位置並搜尋</button>
+</div>
+
+<div id="status-bar">
+    <span id="status">點擊「開始定位搜尋」查看附近地點</span>
+</div>
+
+<div id="main-container">
+    <div id="map"></div>
+    <div id="results-container">
+        <div id="results-list">
+            <div style="padding: 40px; text-align: center; color: #adb5bd;">
+                <p>搜尋結果將顯示在此處</p>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- Leaflet JS -->
@@ -112,17 +175,16 @@
     const statusEl = document.getElementById('status');
     const resultsList = document.getElementById('results-list');
     
-    // 初始化地圖，預設中心在台灣
+    // 初始化地圖
     const map = L.map('map').setView([23.6, 121.0], 7);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: '&copy; OpenStreetMap contributors'
+        attribution: '&copy; OSM'
     }).addTo(map);
 
     let userMarker;
     let locationMarkers = [];
     let searchCircle;
 
-    // API 設定
     const API_BASE_URL = 'http://192.168.1.178:8000'; 
     const API_KEY = "1223";
 
@@ -134,10 +196,9 @@
 
         const radius = radiusSelect.value;
         locateBtn.disabled = true;
-        statusEl.textContent = '正在定位中...';
-        resultsList.innerHTML = '';
+        statusEl.textContent = '📍 正在定位中...';
+        resultsList.innerHTML = '<div style="padding: 20px; text-align: center;">載入中...</div>';
         
-        // 清除舊的標記
         locationMarkers.forEach(m => map.removeLayer(m));
         locationMarkers = [];
         if (searchCircle) map.removeLayer(searchCircle);
@@ -145,7 +206,7 @@
         navigator.geolocation.getCurrentPosition(
             (position) => {
                 const { latitude, longitude } = position.coords;
-                statusEl.textContent = `定位成功: ${latitude.toFixed(4)}, ${longitude.toFixed(4)}`;
+                statusEl.textContent = `📍 定位成功 (${latitude.toFixed(3)}, ${longitude.toFixed(3)})`;
                 
                 map.setView([latitude, longitude], 15);
                 if (userMarker) {
@@ -166,43 +227,40 @@
             },
             (error) => {
                 locateBtn.disabled = false;
-                statusEl.textContent = '定位失敗: ' + error.message;
+                statusEl.textContent = '❌ 定位失敗: ' + error.message;
+                resultsList.innerHTML = '';
             },
             { enableHighAccuracy: true }
         );
     });
 
     async function fetchNearby(lat, lng, radius) {
-        statusEl.textContent = `正在搜尋方圓 ${radius} 公尺內的地點...`;
+        statusEl.textContent = `🔍 正在搜尋方圓 ${radius}m 內的地點...`;
         
         try {
             let apiUrl = `${API_BASE_URL}/api/nearby?lat=${lat}&lng=${lng}&radius=${radius}&key=${API_KEY}`;
-            
             const response = await fetch(apiUrl);
             
             if (!response.ok) {
-                const errorText = await response.text();
-                statusEl.textContent = `API 錯誤 (${response.status}): ${errorText}`;
+                statusEl.textContent = `❌ API 錯誤 (${response.status})`;
                 return;
             }
 
             const result = await response.json();
-            console.log('API Result:', result);
-
             if (result && result.status === 'success') {
                 const data = result.data;
                 if (!data || data.length === 0) {
-                    statusEl.textContent = `方圓 ${radius} 公尺內沒有找到地點`;
+                    statusEl.textContent = `📭 方圓 ${radius}m 內沒有地點`;
+                    resultsList.innerHTML = '<div style="padding: 40px; text-align: center; color: #adb5bd;">查無資料</div>';
                 } else {
-                    statusEl.textContent = `找到 ${data.length} 個地點`;
+                    statusEl.textContent = `✨ 找到 ${data.length} 個地點`;
                     renderResults(data);
                 }
             } else {
-                const errorMsg = (result && result.message) ? result.message : JSON.stringify(result);
-                statusEl.textContent = '搜尋發生錯誤: ' + errorMsg;
+                statusEl.textContent = '❌ 錯誤: ' + (result.message || '未知錯誤');
             }
         } catch (error) {
-            statusEl.textContent = '連線後端 API 失敗，請確認伺服器已啟動且開放存取。如果是 HTTPS 網頁，請確保已允許「不安全內容」。';
+            statusEl.textContent = '❌ 連線 API 失敗 (請確認 IP 與 HTTPS 設定)';
             console.error(error);
         } finally {
             locateBtn.disabled = false;
@@ -210,25 +268,29 @@
     }
 
     function renderResults(locations) {
+        resultsList.innerHTML = '';
         locations.forEach(loc => {
             const coordsMatch = loc.location_wkt.match(/\((.*)\)/);
             if (coordsMatch) {
                 const [lng, lat] = coordsMatch[1].split(' ').map(Number);
                 const marker = L.marker([lat, lng]).addTo(map)
-                    .bindPopup(`<b>${loc.名稱}</b><br>${loc.說明 || ''}<br>距離: ${Math.round(loc.distance)}m`);
+                    .bindPopup(`<b>${loc.名稱}</b><br>距離: ${Math.round(loc.distance)}m`);
                 locationMarkers.push(marker);
 
-                const div = document.createElement('div');
-                div.className = 'location-item';
-                div.innerHTML = `
-                    <div class="location-name">${loc.名稱}</div>
-                    <div class="location-dist">距離: ${Math.round(loc.distance)} 公尺</div>
+                const item = document.createElement('div');
+                item.className = 'location-item';
+                item.innerHTML = `
+                    <div class="location-info">
+                        <div class="location-name">${loc.名稱}</div>
+                        <div class="location-desc">${loc.說明 || '暫無說明'}</div>
+                    </div>
+                    <div class="location-dist-badge">${Math.round(loc.distance)}m</div>
                 `;
-                div.onclick = () => {
+                item.onclick = () => {
                     map.setView([lat, lng], 17);
                     marker.openPopup();
                 };
-                resultsList.appendChild(div);
+                resultsList.appendChild(item);
             }
         });
     }
