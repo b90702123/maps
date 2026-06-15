@@ -48,6 +48,13 @@
             background: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6 9 12 15 18 9'%3e%3c/polyline%3e%3c/svg%3e") no-repeat right 10px center/15px;
             background-color: #fff;
         }
+        input[type="text"] {
+            flex: 2;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ced4da;
+            font-size: 15px;
+        }
         button {
             padding: 12px;
             font-size: 16px;
@@ -141,6 +148,9 @@
 
 <div id="controls">
     <div class="control-row">
+        <input type="text" id="keyword-input" placeholder="輸入關鍵字 (如：咖啡、炸雞)...">
+    </div>
+    <div class="control-row">
         <label for="radius-select" style="font-size: 14px; font-weight: bold; color: #495057;">範圍</label>
         <select id="radius-select">
             <option value="500">500 公尺</option>
@@ -148,12 +158,12 @@
             <option value="2000">2 公里</option>
             <option value="5000">5 公里</option>
         </select>
-        <button id="locate-btn" style="flex: 1.5;">開始定位搜尋</button>
+        <button id="locate-btn" style="flex: 1.5;">搜尋附近</button>
     </div>
 </div>
 
 <div id="status-bar">
-    <span id="status">點擊「開始定位搜尋」查看附近地點</span>
+    <span id="status">輸入關鍵字並點擊「搜尋附近」</span>
 </div>
 
 <div id="main-container">
@@ -172,6 +182,7 @@
 <script>
     const locateBtn = document.getElementById('locate-btn');
     const radiusSelect = document.getElementById('radius-select');
+    const keywordInput = document.getElementById('keyword-input');
     const statusEl = document.getElementById('status');
     const resultsList = document.getElementById('results-list');
     
@@ -195,6 +206,8 @@
         }
 
         const radius = radiusSelect.value;
+        const keyword = keywordInput.value.trim();
+        
         locateBtn.disabled = true;
         statusEl.textContent = '📍 正在定位中...';
         resultsList.innerHTML = '<div style="padding: 20px; text-align: center;">載入中...</div>';
@@ -223,7 +236,7 @@
                 }).addTo(map);
 
                 map.fitBounds(searchCircle.getBounds());
-                fetchNearby(latitude, longitude, radius);
+                fetchNearby(latitude, longitude, radius, keyword);
             },
             (error) => {
                 locateBtn.disabled = false;
@@ -234,11 +247,19 @@
         );
     });
 
-    async function fetchNearby(lat, lng, radius) {
-        statusEl.textContent = `🔍 正在搜尋方圓 ${radius}m 內的地點...`;
+    async function fetchNearby(lat, lng, radius, keyword) {
+        let statusText = `🔍 搜尋方圓 ${radius}m 內`;
+        if (keyword) statusText += ` 的「${keyword}」...`;
+        else statusText += ' 的所有地點...';
+        
+        statusEl.textContent = statusText;
         
         try {
             let apiUrl = `${API_BASE_URL}/api/nearby?lat=${lat}&lng=${lng}&radius=${radius}&key=${API_KEY}`;
+            if (keyword) {
+                apiUrl += `&keyword=${encodeURIComponent(keyword)}`;
+            }
+            
             const response = await fetch(apiUrl);
             
             if (!response.ok) {
